@@ -1,11 +1,20 @@
 # ChatDice - Future Improvements
 
+## ⭐ Priority Features (User Requested)
+
+- [ ] **LLM Queue Filler** - AI chatbot with random personalities to chat with users while waiting for matches. Solves cold start problem. 15-20 second wait before activating, seamlessly transitions to real user when available. Cost: ~$30-150/month.
+  
+- [ ] **1v1 Game Mode** - Add simple games (tic-tac-toe, rock-paper-scissors, word games) that users can play together while chatting. Increases engagement and session time.
+
+- [ ] **"Users Online" Counter** - Display number of active users (only show when >20 concurrent to avoid deterring early users). Provides social proof.
+
+---
+
 ## 📊 Analytics & Tracking
 - [ ] Custom event tracking (button clicks, chats started, messages sent)
 - [ ] Track average session duration and chat length
 
 ## 👥 User Experience
-- [ ] "Users online" counter (add when >20 concurrent users)
 - [ ] Typing indicators ("Stranger is typing...")
 - [ ] Read receipts
 - [ ] Sound notification on new message
