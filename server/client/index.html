@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="google-adsense-account" content="ca-pub-1590328047276075">
+  <meta name="google-site-verification" content="6sXzs74TRiY7BorqVVw3HVul6rYo0KEAiTgDPvV4xn4" />
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="alternate icon" href="/favicon.ico">
+  <link rel="apple-touch-icon" href="/favicon.svg">
+  
+  <!-- Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XYFQEGDG9V"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-XYFQEGDG9V');
+  </script>
+  
+  <!-- SEO Meta Tags -->
+  <title>ChatDice - Random Chat with Strangers | Free Anonymous Chat</title>
+  <meta name="description" content="Connect with random people instantly on ChatDice. Free anonymous chat - 1-on-1 or group chats with strangers. No registration required. Start chatting now!">
+  <meta name="keywords" content="random chat, chat with strangers, anonymous chat, free chat, omegle alternative, random video chat, stranger chat, group chat, 1 on 1 chat">
+  <meta name="author" content="ChatDice">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://www.chatdice.live/">
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://www.chatdice.live/">
+  <meta property="og:title" content="ChatDice - Random Chat with Strangers">
+  <meta property="og:description" content="Connect with random people instantly. Free anonymous chat - 1-on-1 or group chats with strangers. No registration required!">
+  <meta property="og:image" content="https://www.chatdice.live/og-image.png">
+  
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="https://www.chatdice.live/">
+  <meta property="twitter:title" content="ChatDice - Random Chat with Strangers">
+  <meta property="twitter:description" content="Connect with random people instantly. Free anonymous chat - 1-on-1 or group chats with strangers. No registration required!">
+  <meta property="twitter:image" content="https://www.chatdice.live/og-image.png">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Ad Space - Top Banner -->
+    <div class="ad-banner ad-space">
+      <p>Ad Space - 728x90 Banner</p>
+    </div>
+
+    <header>
+      <h1><a href="/" style="color: inherit; text-decoration: none; cursor: pointer;">🎲 ChatDice</a></h1>
+      <p class="tagline">Roll into random conversations instantly</p>
+    </header>
+
+    <main id="landing-page">
+      <div class="button-container">
+        <button id="start-1on1-btn" class="chat-btn primary">
+          <span class="btn-icon">💬</span>
+          <span class="btn-text">Start 1-on-1 Chat</span>
+          <span class="btn-subtitle">Chat with one random person</span>
+        </button>
+
+        <button id="start-group-btn" class="chat-btn secondary">
+          <span class="btn-icon">👥</span>
+          <span class="btn-text">Join Group Chat</span>
+          <span class="btn-subtitle">Chat with 9 other people</span>
+        </button>
+      </div>
+
+      <div class="info-section">
+        <h3>How it works:</h3>
+        <ul>
+          <li>Click a button to start chatting</li>
+          <li>Get matched instantly or wait up to 1 hour</li>
+          <li>Chat anonymously with text messages</li>
+          <li>Leave anytime - no strings attached</li>
+        </ul>
+        
+        <div style="margin-top: 30px;">
+          <h3>Why ChatDice?</h3>
+          <p>Looking for a random chat site? ChatDice is the best Omegle alternative for meeting new people. Our free anonymous chat platform lets you connect with strangers worldwide through 1-on-1 private chats or exciting 10-person group conversations. No registration, no downloads, no hassle - just instant connections!</p>
+        </div>
+      </div>
+    </main>
+
+    <!-- Chat Interface (hidden by default) -->
+    <div id="chat-interface" style="display: none;">
+      <div class="chat-header">
+        <div id="chat-info">
+          <span id="chat-type"></span>
+          <span id="user-count"></span>
+        </div>
+        <div class="chat-controls">
+          <button id="report-btn" class="icon-btn" title="Report user">⚠️</button>
+          <button id="leave-btn" class="icon-btn danger" title="Leave chat">❌</button>
+        </div>
+      </div>
+
+      <!-- Ad Space - Sidebar -->
+      <div class="chat-content-wrapper">
+        <div class="ad-sidebar ad-space">
+          <p>Ad Space<br>300x600<br>Sidebar</p>
+        </div>
+
+        <div class="chat-main">
+          <div id="status-message" class="status-message"></div>
+          
+          <div id="messages-container" class="messages-container"></div>
+          
+          <div class="message-input-container">
+            <input 
+              type="text" 
+              id="message-input" 
+              placeholder="Type your message..." 
+              maxlength="500"
+              autocomplete="off"
+            />
+            <button id="send-btn" class="send-btn">Send</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ad Space - Bottom Banner -->
+    <div class="ad-banner ad-space bottom">
+      <p>Ad Space - 728x90 Banner</p>
+    </div>
+
+    <footer>
+      <p>Be respectful. Report inappropriate behavior. Messages stored for 30 days for safety.</p>
+      <p style="margin-top: 10px;">
+        <a href="/about.html" style="color: #667eea; margin: 0 10px;">About</a> • 
+        <a href="/privacy.html" style="color: #667eea; margin: 0 10px;">Privacy Policy</a> • 
+        <a href="/terms.html" style="color: #667eea; margin: 0 10px;">Terms of Service</a>
+      </p>
+      <p style="margin-top: 10px; font-size: 0.85rem; color: #999;">
+        © 2026 ChatDice. All rights reserved.
+      </p>
+    </footer>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
