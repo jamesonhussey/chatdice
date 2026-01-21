@@ -7,6 +7,8 @@ const OpenAIClient = require('./openai-client');
 const PersonalitySelector = require('./personality-selector');
 const HumanBehavior = require('./human-behavior');
 const config = require('../config/settings');
+const fs = require('fs');
+const path = require('path');
 
 class ConversationManager {
   constructor(apiKey) {
@@ -215,6 +217,65 @@ class ConversationManager {
    */
   getConversation(userId) {
     return this.activeConversations.get(userId) || null;
+  }
+
+  /**
+   * Generate first message from AI
+   * @param {string} userId - Socket ID of the user
+   * @returns {Promise<Object>} - {response: string, delay: number, shouldEnd: boolean}
+   */
+  async generateFirstMessage(userId) {
+    const conversation = this.activeConversations.get(userId);
+    
+    if (!conversation) {
+      throw new Error(`No active conversation for user ${userId}`);
+    }
+
+    try {
+      // Create a system prompt for first message
+      const firstMessagePrompt = {
+        role: 'system',
+        content: 'Start the conversation with a brief, casual greeting or opening line. Keep it natural and brief (1-2 sentences max). Act like you just got matched with someone new on a random chat site.'
+      };
+
+      // Use personality prompt + first message instruction
+      const messages = [
+        conversation.messages[0], // Original personality system prompt
+        firstMessagePrompt
+      ];
+
+      // Get AI response
+      const rawResponse = await this.openaiClient.getChatCompletionWithRetry(messages);
+      
+      // Humanize the response
+      const humanizedResponse = HumanBehavior.humanize(rawResponse);
+
+      // Add to conversation history
+      conversation.messages.push({
+        role: 'assistant',
+        content: humanizedResponse
+      });
+
+      // Calculate realistic delay
+      const delay = Math.floor(
+        Math.random() * (config.FIRST_MESSAGE_DELAY_MAX - config.FIRST_MESSAGE_DELAY_MIN) +
+        config.FIRST_MESSAGE_DELAY_MIN
+      );
+
+      if (config.LOG_AI_CONVERSATIONS) {
+        console.log(`🤖 AI (${conversation.personality.name}) first message → User ${userId}: "${humanizedResponse}"`);
+      }
+
+      return {
+        response: humanizedResponse,
+        delay,
+        shouldEnd: false
+      };
+
+    } catch (error) {
+      console.error(`❌ Error generating first message for user ${userId}:`, error.message);
+      return null;
+    }
   }
 
   /**

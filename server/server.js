@@ -135,6 +135,16 @@ io.on('connection', (socket) => {
               return true; // Real user found and matched
             }
             return false; // No other real user yet
+          },
+          // Send first message callback
+          (firstMessage) => {
+            setTimeout(() => {
+              socket.emit('message', {
+                userId: 'ai-bot',
+                message: firstMessage.response,
+                timestamp: Date.now()
+              });
+            }, firstMessage.delay);
           }
         );
       }

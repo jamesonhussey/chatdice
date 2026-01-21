@@ -53,9 +53,10 @@ class AIChatModule {
    * @param {string} userId - Socket ID
    * @param {Function} matchCallback - Called when AI match is ready
    * @param {Function} realUserCallback - Called when real user becomes available
+   * @param {Function} sendFirstMessageCallback - Called to send AI's first message
    * @returns {number} - Queue wait time in milliseconds
    */
-  queueForAIMatch(userId, matchCallback, realUserCallback) {
+  queueForAIMatch(userId, matchCallback, realUserCallback, sendFirstMessageCallback) {
     if (!this.isAvailable()) {
       console.log('⚠️  AI Chat not available for queue');
       return 0;
@@ -72,15 +73,16 @@ class AIChatModule {
     this.queuedUsers.set(userId, {
       queueTime: Date.now(),
       matchCallback,
-      realUserCallback
+      realUserCallback,
+      sendFirstMessageCallback
     });
 
     // Set timer for AI match
-    const matchTimer = setTimeout(() => {
+    const matchTimer = setTimeout(async () => {
       const queueInfo = this.queuedUsers.get(userId);
       if (queueInfo) {
         // User still queued, match with AI
-        this.matchWithAI(userId, matchCallback, realUserCallback);
+        await this.matchWithAI(userId, matchCallback, realUserCallback, sendFirstMessageCallback);
       }
     }, waitTime);
 
@@ -95,8 +97,9 @@ class AIChatModule {
    * @param {string} userId - Socket ID
    * @param {Function} matchCallback - Called to notify match
    * @param {Function} realUserCallback - Called when real user becomes available
+   * @param {Function} sendFirstMessageCallback - Called to send AI's first message
    */
-  matchWithAI(userId, matchCallback, realUserCallback) {
+  async matchWithAI(userId, matchCallback, realUserCallback, sendFirstMessageCallback) {
     console.log(`🤖 Matching user ${userId} with AI bot`);
 
     // Start conversation
@@ -107,6 +110,18 @@ class AIChatModule {
       isAI: true,
       personality: conversation.personality.name
     });
+
+    // Decide if AI should message first
+    if (Math.random() < config.FIRST_MESSAGE_PROBABILITY && sendFirstMessageCallback) {
+      try {
+        const firstMessage = await this.conversationManager.generateFirstMessage(userId);
+        if (firstMessage && firstMessage.response) {
+          sendFirstMessageCallback(firstMessage);
+        }
+      } catch (error) {
+        console.error('Error sending AI first message:', error);
+      }
+    }
 
     // Start polling for real users
     this.startPollingForRealUser(userId, realUserCallback);

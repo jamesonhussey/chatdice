@@ -17,6 +17,11 @@ module.exports = {
   AI_RESPONSE_DELAY_MIN: 2000,          // Minimum delay before AI responds (2 seconds)
   AI_RESPONSE_DELAY_MAX: 8000,          // Maximum delay before AI responds (8 seconds)
   
+  // ===== FIRST MESSAGE BEHAVIOR =====
+  FIRST_MESSAGE_PROBABILITY: 0.65,      // 65% chance AI messages first
+  FIRST_MESSAGE_DELAY_MIN: 2000,        // Minimum delay before first message (2 seconds)
+  FIRST_MESSAGE_DELAY_MAX: 6000,        // Maximum delay before first message (6 seconds)
+  
   // ===== OPENAI SETTINGS =====
   OPENAI_MODEL: 'gpt-3.5-turbo',        // Model to use
   OPENAI_TEMPERATURE: 0.9,              // Higher = more random/creative (0-2)
