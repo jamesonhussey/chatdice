@@ -4,6 +4,7 @@ const { Server } = require('socket.io');
 const path = require('path');
 const ChatDatabase = require('./database');
 const Matchmaker = require('./matchmaking');
+const aiChat = require('./ai-chat');
 
 const app = express();
 const server = http.createServer(app);
@@ -17,6 +18,7 @@ const io = new Server(server, {
 // Initialize services
 const db = new ChatDatabase();
 const matchmaker = new Matchmaker();
+aiChat.initialize();
 
 // Rate limiting map
 const messageCounts = new Map();
@@ -28,7 +30,10 @@ app.use(express.static(path.join(__dirname, 'client')));
 
 // Stats endpoint (optional - for monitoring)
 app.get('/api/stats', (req, res) => {
-  res.json(matchmaker.getStats());
+  res.json({
+    ...matchmaker.getStats(),
+    aiChat: aiChat.getStats()
+  });
 });
 
 // 404 handler - must be after all other routes
@@ -45,6 +50,11 @@ io.on('connection', (socket) => {
     const result = matchmaker.addToOneOnOneQueue(socket.id);
     
     if (result.matched) {
+      // Cancel any AI queue if exists
+      if (aiChat.isAvailable()) {
+        aiChat.cancelQueuedMatch(socket.id);
+      }
+      
       // Notify both users they've been matched
       result.users.forEach(userId => {
         io.to(userId).emit('matched', {
@@ -64,6 +74,70 @@ io.on('connection', (socket) => {
         position: result.position,
         message: 'Waiting for a chat partner...'
       });
+      
+      // Queue for AI match if available
+      if (aiChat.isAvailable()) {
+        const waitTime = aiChat.queueForAIMatch(
+          socket.id,
+          // AI match callback
+          (matchInfo) => {
+            // Remove user from matchmaker queue (they're now in AI chat)
+            matchmaker.removeFromQueues(socket.id);
+            
+            socket.emit('matched', {
+              roomId: 'ai-chat',
+              roomType: '1on1',
+              userCount: 2
+            });
+          },
+          // Real user check callback
+          () => {
+            // Check if there's ANOTHER real user waiting (not self)
+            const hasOtherUser = matchmaker.oneOnOneQueue.length > 0;
+            
+            if (hasOtherUser) {
+              // Find non-recent partner in queue
+              let foundPartner = null;
+              
+              for (let i = 0; i < matchmaker.oneOnOneQueue.length; i++) {
+                const candidate = matchmaker.oneOnOneQueue[i];
+                if (!matchmaker.isRecentPartner(socket.id, candidate.socketId)) {
+                  foundPartner = matchmaker.oneOnOneQueue.splice(i, 1)[0];
+                  break;
+                }
+              }
+              
+              // If no non-recent partner found, let AI continue (better than same person)
+              if (!foundPartner) {
+                return false;
+              }
+              
+              // Cancel other user's AI queue timer (they're getting a real match now!)
+              aiChat.cancelQueuedMatch(foundPartner.socketId);
+              
+              // Create room between current user and other user
+              const result = matchmaker.createOneOnOneRoom(socket.id, foundPartner.socketId);
+              
+              // Notify both users of match
+              result.users.forEach(userId => {
+                io.to(userId).emit('matched', {
+                  roomId: result.roomId,
+                  roomType: result.roomType,
+                  userCount: 2
+                });
+              });
+              
+              // Join both to the room
+              result.users.forEach(userId => {
+                io.sockets.sockets.get(userId)?.join(result.roomId);
+              });
+              
+              return true; // Real user found and matched
+            }
+            return false; // No other real user yet
+          }
+        );
+      }
     }
   });
 
@@ -97,8 +171,70 @@ io.on('connection', (socket) => {
   });
 
   // Send message
-  socket.on('send-message', (data) => {
+  socket.on('send-message', async (data) => {
     const { message } = data;
+    
+    // Check if in AI chat
+    if (aiChat.isInAIChat(socket.id)) {
+      try {
+        // Get AI response
+        const response = await aiChat.handleUserMessage(socket.id, message);
+        
+        // Send user's message back to them
+        socket.emit('message', {
+          userId: socket.id,
+          message,
+          timestamp: Date.now()
+        });
+        
+        if (response.shouldEnd) {
+          // AI wants to end conversation
+          if (response.response) {
+            // Send exit message after delay
+            setTimeout(() => {
+              socket.emit('message', {
+                userId: 'ai-bot',
+                message: response.response,
+                timestamp: Date.now()
+              });
+              
+              // Disconnect after short delay
+              setTimeout(() => {
+                socket.emit('chat-ended', {
+                  reason: 'Chat partner disconnected'
+                });
+                aiChat.endAIChat(socket.id, 'ai-ended');
+              }, 1000);
+            }, response.delay);
+          } else {
+            // Ghost - just disconnect
+            setTimeout(() => {
+              socket.emit('chat-ended', {
+                reason: 'Chat partner disconnected'
+              });
+              aiChat.endAIChat(socket.id, 'ai-ghosted');
+            }, 2000);
+          }
+        } else if (response.response) {
+          // Normal AI response
+          setTimeout(() => {
+            socket.emit('message', {
+              userId: 'ai-bot',
+              message: response.response,
+              timestamp: Date.now()
+            });
+          }, response.delay);
+        }
+        // If response is null and not ending, AI is ignoring (realistic)
+        
+      } catch (error) {
+        console.error('Error handling AI message:', error);
+        socket.emit('error', { message: 'Something went wrong. Please try again.' });
+      }
+      return;
+    }
+    
+    // Normal chat (not AI)
     const room = matchmaker.getRoomBySocketId(socket.id);
     
     if (!room) {
@@ -165,12 +301,25 @@ io.on('connection', (socket) => {
   });
 
   function handleDisconnect(socket) {
+    // End AI chat if in one
+    if (aiChat.isInAIChat(socket.id)) {
+      aiChat.endAIChat(socket.id, 'user-disconnected');
+    }
+    
+    // Cancel any queued AI match
+    if (aiChat.isAvailable()) {
+      aiChat.cancelQueuedMatch(socket.id);
+    }
+    
     // Remove from queues
     matchmaker.removeFromQueues(socket.id);
     
     // Leave room if in one
     const result = matchmaker.leaveRoom(socket.id);
     if (result && result.room) {
+      // Actually remove socket from Socket.IO room
+      socket.leave(result.roomId);
+      
       // Notify remaining users
       io.to(result.roomId).emit('user-left', {
         userId: socket.id,
@@ -184,6 +333,9 @@ io.on('connection', (socket) => {
         });
       }
     }
+    
+    // Clear recent partners history
+    matchmaker.clearRecentPartners(socket.id);
     
     // Clean up rate limiting
     messageCounts.delete(socket.id);

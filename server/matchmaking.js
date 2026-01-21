@@ -21,9 +21,41 @@ class Matchmaker {
     this.activeRooms = new Map();
     this.userToRoom = new Map();
     this.userColors = new Map(); // Track user colors in rooms
+    this.recentPartners = new Map(); // Track recent chat partners (userId -> [recent partner IDs])
     
     // Start queue cleanup job
     this.startQueueCleanup();
+  }
+
+  /**
+   * Check if two users have chatted recently
+   * @param {string} userId1 - First user ID
+   * @param {string} userId2 - Second user ID
+   * @returns {boolean} - True if they've chatted recently
+   */
+  isRecentPartner(userId1, userId2) {
+    const user1Recent = this.recentPartners.get(userId1) || [];
+    const user2Recent = this.recentPartners.get(userId2) || [];
+    return user1Recent.includes(userId2) || user2Recent.includes(userId1);
+  }
+
+  /**
+   * Add partner to user's recent list
+   * @param {string} userId - User ID
+   * @param {string} partnerId - Partner ID to remember
+   */
+  addRecentPartner(userId, partnerId) {
+    const recent = this.recentPartners.get(userId) || [];
+    
+    // Add to front of list
+    recent.unshift(partnerId);
+    
+    // Keep only last 5
+    if (recent.length > 5) {
+      recent.pop();
+    }
+    
+    this.recentPartners.set(userId, recent);
   }
 
   addToOneOnOneQueue(socketId) {
@@ -35,13 +67,31 @@ class Matchmaker {
 
     // Check if there's someone waiting
     if (this.oneOnOneQueue.length > 0) {
-      const partner = this.oneOnOneQueue.shift();
+      // Look for a non-recent partner in queue
+      let partnerIndex = -1;
       
-      // Check if partner is still valid (not expired)
-      if (Date.now() - partner.timestamp < 3600000) { // 1 hour
+      for (let i = 0; i < this.oneOnOneQueue.length; i++) {
+        const candidate = this.oneOnOneQueue[i];
+        
+        // Check if valid (not expired)
+        if (Date.now() - candidate.timestamp >= 3600000) {
+          continue; // Skip expired
+        }
+        
+        // Check if not a recent partner
+        if (!this.isRecentPartner(socketId, candidate.socketId)) {
+          partnerIndex = i;
+          break;
+        }
+      }
+      
+      if (partnerIndex !== -1) {
+        // Found a non-recent partner
+        const partner = this.oneOnOneQueue.splice(partnerIndex, 1)[0];
         return this.createOneOnOneRoom(partner.socketId, socketId);
       } else {
-        // Partner expired, add current user to queue
+        // No non-recent partners available, add to queue
+        // (AI will handle if no one else joins)
         this.oneOnOneQueue.push(queueEntry);
         return { queued: true, position: this.oneOnOneQueue.length };
       }
@@ -99,6 +149,10 @@ class Matchmaker {
     this.activeRooms.set(roomId, room);
     this.userToRoom.set(socketId1, roomId);
     this.userToRoom.set(socketId2, roomId);
+
+    // Track as recent partners (prevent immediate re-matching)
+    this.addRecentPartner(socketId1, socketId2);
+    this.addRecentPartner(socketId2, socketId1);
 
     console.log(`✓ Created 1-on-1 room: ${roomId}`);
     
@@ -173,7 +227,17 @@ class Matchmaker {
       console.log(`✗ Deleted room: ${roomId}`);
     }
 
+    // Note: Don't clear recentPartners on room leave - keeps history for rematching prevention
+
     return { roomId, room };
+  }
+
+  /**
+   * Clear recent partners for a user (on disconnect)
+   * @param {string} socketId - User ID
+   */
+  clearRecentPartners(socketId) {
+    this.recentPartners.delete(socketId);
   }
 
   getRoomBySocketId(socketId) {

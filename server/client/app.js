@@ -13,13 +13,14 @@ const statusMessage = document.getElementById('status-message');
 const chatType = document.getElementById('chat-type');
 const userCount = document.getElementById('user-count');
 const reportBtn = document.getElementById('report-btn');
-const leaveBtn = document.getElementById('leave-btn');
+const rerollBtn = document.getElementById('reroll-btn');
 
 // State
 let currentRoom = null;
 let currentRoomType = null;
 let mySocketId = null;
 let myColor = null;
+let rerollCooldown = false;
 
 // Get socket ID on connection
 socket.on('connect', () => {
@@ -46,11 +47,33 @@ messageInput.addEventListener('keypress', (e) => {
   }
 });
 
-leaveBtn.addEventListener('click', () => {
-  if (confirm('Are you sure you want to leave this chat?')) {
-    socket.emit('leave-chat');
-    resetToLanding();
-  }
+rerollBtn.addEventListener('click', () => {
+  if (rerollCooldown) return;
+  
+  // Set cooldown
+  rerollCooldown = true;
+  rerollBtn.disabled = true;
+  
+  // Leave current chat
+  socket.emit('leave-chat');
+  
+  // Show searching animation
+  showSearchingAnimation();
+  
+  // Start new search after brief moment
+  setTimeout(() => {
+    if (currentRoomType === 'group') {
+      socket.emit('start-group');
+    } else {
+      socket.emit('start-1on1');
+    }
+    
+    // Reset cooldown after 3 seconds
+    setTimeout(() => {
+      rerollCooldown = false;
+      if (rerollBtn) rerollBtn.disabled = false;
+    }, 3000);
+  }, 500);
 });
 
 reportBtn.addEventListener('click', () => {
@@ -68,6 +91,7 @@ socket.on('queued', (data) => {
   startGroupBtn.classList.remove('loading');
   
   showChatInterface();
+  showSearchingAnimation();
   showStatus(`${data.message} You'll be notified when a match is found.`, 'info');
   
   currentRoomType = data.type;
@@ -84,6 +108,9 @@ socket.on('matched', (data) => {
   myColor = data.myColor || null;
   
   showChatInterface();
+  
+  // Clear searching animation
+  messagesContainer.innerHTML = '';
   
   let statusText = 'Match found! You can start chatting now.';
   if (myColor) {
@@ -115,15 +142,27 @@ socket.on('user-left', (data) => {
 });
 
 socket.on('chat-ended', (data) => {
-  showStatus(data.reason, 'info');
+  // Partner left - auto-reroll to find new match
+  addSystemMessage(data.reason);
+  addSystemMessage('🎲 Finding you a new match...');
+  
+  // Disable input temporarily
   messageInput.disabled = true;
   sendBtn.disabled = true;
   
+  // Show searching animation
+  showSearchingAnimation();
+  
+  // Auto-reroll after brief delay
   setTimeout(() => {
-    if (confirm('Chat ended. Return to home?')) {
-      resetToLanding();
+    const wasGroupChat = currentRoomType === 'group';
+    
+    if (wasGroupChat) {
+      socket.emit('start-group');
+    } else {
+      socket.emit('start-1on1');
     }
-  }, 2000);
+  }, 1000);
 });
 
 socket.on('error', (data) => {
@@ -224,6 +263,15 @@ function showStatus(message, type = 'info') {
   }
 }
 
+function showSearchingAnimation() {
+  messagesContainer.innerHTML = `
+    <div class="searching-animation">
+      <div class="dice">🎲</div>
+      <p>Rolling for a match...</p>
+    </div>
+  `;
+}
+
 function showChatInterface() {
   landingPage.style.display = 'none';
   chatInterface.style.display = 'flex';
@@ -251,11 +299,4 @@ if ('Notification' in window && Notification.permission === 'default') {
   Notification.requestPermission();
 }
 
-// Warn before leaving page if in active chat
-window.addEventListener('beforeunload', (e) => {
-  if (currentRoom) {
-    e.preventDefault();
-    e.returnValue = 'You are in an active chat. Are you sure you want to leave?';
-    return e.returnValue;
-  }
-});
+// Removed beforeunload warning for smoother experience
