@@ -2,11 +2,13 @@
 
 ## ⭐ Priority Features (User Requested)
 
-- [ ] **LLM Queue Filler** - AI chatbot with random personalities to chat with users while waiting for matches. Solves cold start problem. 15-20 second wait before activating, seamlessly transitions to real user when available. Cost: ~$30-150/month.
+- [x] **LLM Queue Filler** - AI chatbot with random personalities to chat with users while waiting for matches. Solves cold start problem. 10-20 second wait before activating, seamlessly transitions to real user when available. 8 personalities with general + specific prompts.
   
 - [ ] **1v1 Game Mode** - Add simple games (tic-tac-toe, rock-paper-scissors, word games) that users can play together while chatting. Increases engagement and session time.
 
 - [ ] **"Users Online" Counter** - Display number of active users (only show when >20 concurrent to avoid deterring early users). Provides social proof.
+
+- [ ] **AI Autonomous Leaving** - Allow AI to decide when to leave conversations based on comfort/appropriateness. Use separate evaluation API call every X messages (e.g., every 5-7 messages) to keep costs low. Simple yes/no check: "Should you end this conversation?" This prevents inappropriate/weird interactions from lasting too long.
 
 ---
 
@@ -46,4 +48,4 @@
 
 ---
 
-*Last updated: 2026-01-16*
+*Last updated: 2026-01-22*

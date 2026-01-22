@@ -14,6 +14,10 @@ const chatType = document.getElementById('chat-type');
 const userCount = document.getElementById('user-count');
 const reportBtn = document.getElementById('report-btn');
 const rerollBtn = document.getElementById('reroll-btn');
+const redirectModal = document.getElementById('redirect-modal');
+const modalTitle = document.getElementById('modal-title');
+const modalMessage = document.getElementById('modal-message');
+const modalBtn = document.getElementById('modal-btn');
 
 // State
 let currentRoom = null;
@@ -169,6 +173,16 @@ socket.on('error', (data) => {
   showStatus(data.message, 'error');
 });
 
+socket.on('afk-redirect', (data) => {
+  // User was AFK for too many chats - show modal
+  showRedirectModal('Inactive User', data.message);
+});
+
+socket.on('inactivity-redirect', (data) => {
+  // User was inactive for too long - show modal
+  showRedirectModal('Session Timeout', data.message);
+});
+
 socket.on('report-sent', (data) => {
   alert(data.message);
 });
@@ -262,6 +276,41 @@ function showStatus(message, type = 'info') {
     }, 3000);
   }
 }
+
+function showRedirectModal(title, message) {
+  // Set modal content
+  modalTitle.textContent = title;
+  modalMessage.textContent = message;
+  
+  // Show modal
+  redirectModal.classList.remove('hidden');
+}
+
+function hideRedirectModal() {
+  redirectModal.classList.add('hidden');
+  
+  // Return to landing page
+  currentRoom = null;
+  currentRoomType = null;
+  myColor = null;
+  chatInterface.style.display = 'none';
+  landingPage.style.display = 'block';
+  messagesContainer.innerHTML = '';
+  messageInput.disabled = false;
+  sendBtn.disabled = false;
+  messageInput.value = '';
+  start1on1Btn.classList.remove('loading');
+  startGroupBtn.classList.remove('loading');
+  
+  // Hide searching animation if it's showing
+  const searchingAnimation = document.getElementById('searching-animation');
+  if (searchingAnimation) {
+    searchingAnimation.style.display = 'none';
+  }
+}
+
+// Modal button click handler
+modalBtn.addEventListener('click', hideRedirectModal);
 
 function showSearchingAnimation() {
   messagesContainer.innerHTML = `

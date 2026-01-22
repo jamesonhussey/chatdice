@@ -25,6 +25,12 @@ const messageCounts = new Map();
 const RATE_LIMIT = 20; // messages per minute
 const RATE_WINDOW = 60000; // 1 minute
 
+// AFK detection
+const userActivity = new Map(); // Track message counts and silent chats
+const AFK_SILENT_CHAT_LIMIT = 2; // Boot after 2 silent chats in a row
+const INACTIVITY_TIMEOUT = 150000; // 2.5 minutes in milliseconds
+const inactivityTimers = new Map(); // Track inactivity timers for all chats
+
 // Serve static files from client directory
 app.use(express.static(path.join(__dirname, 'client')));
 
@@ -44,9 +50,30 @@ app.use((req, res) => {
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log(`User connected: ${socket.id}`);
+  
+  // Initialize user activity tracking
+  if (!userActivity.has(socket.id)) {
+    userActivity.set(socket.id, {
+      messagesInCurrentChat: 0,
+      consecutiveSilentChats: 0
+    });
+  }
 
   // Start 1-on-1 chat
   socket.on('start-1on1', () => {
+    const activity = userActivity.get(socket.id);
+    
+    // Reset message counter for new chat and reset AFK counter (user is actively engaging)
+    if (activity) {
+      activity.messagesInCurrentChat = 0;
+      
+      // If user was marked as AFK, reset their counter (they're actively trying to chat now)
+      if (activity.consecutiveSilentChats > 0) {
+        console.log(`✓ Resetting AFK counter for user ${socket.id} (was ${activity.consecutiveSilentChats})`);
+        activity.consecutiveSilentChats = 0;
+      }
+    }
+
     const result = matchmaker.addToOneOnOneQueue(socket.id);
     
     if (result.matched) {
@@ -67,6 +94,8 @@ io.on('connection', (socket) => {
       // Join both users to the socket.io room
       result.users.forEach(userId => {
         io.sockets.sockets.get(userId)?.join(result.roomId);
+        // Start inactivity timer for each user
+        startInactivityTimer(userId);
       });
     } else if (result.queued) {
       socket.emit('queued', {
@@ -89,6 +118,9 @@ io.on('connection', (socket) => {
               roomType: '1on1',
               userCount: 2
             });
+
+            // Start inactivity timer
+            startInactivityTimer(socket.id);
           },
           // Real user check callback
           () => {
@@ -153,6 +185,19 @@ io.on('connection', (socket) => {
 
   // Start group chat
   socket.on('start-group', () => {
+    const activity = userActivity.get(socket.id);
+    
+    // Reset message counter for new chat and reset AFK counter (user is actively engaging)
+    if (activity) {
+      activity.messagesInCurrentChat = 0;
+      
+      // If user was marked as AFK, reset their counter (they're actively trying to chat now)
+      if (activity.consecutiveSilentChats > 0) {
+        console.log(`✓ Resetting AFK counter for user ${socket.id} (was ${activity.consecutiveSilentChats})`);
+        activity.consecutiveSilentChats = 0;
+      }
+    }
+
     const result = matchmaker.addToGroupQueue(socket.id);
     
     if (result.matched) {
@@ -170,6 +215,8 @@ io.on('connection', (socket) => {
       // Join all users to the socket.io room
       result.users.forEach(userId => {
         io.sockets.sockets.get(userId)?.join(result.roomId);
+        // Start inactivity timer for each user
+        startInactivityTimer(userId);
       });
     } else if (result.queued) {
       socket.emit('queued', {
@@ -183,6 +230,19 @@ io.on('connection', (socket) => {
   // Send message
   socket.on('send-message', async (data) => {
     const { message } = data;
+    
+    // Track user activity (they sent a message)
+    const activity = userActivity.get(socket.id);
+    if (activity) {
+      activity.messagesInCurrentChat++;
+      // Reset silent chat counter since they're active
+      if (activity.consecutiveSilentChats > 0) {
+        activity.consecutiveSilentChats = 0;
+      }
+    }
+    
+    // Reset inactivity timer since user sent a message
+    resetInactivityTimer(socket.id);
     
     // Check if in AI chat
     if (aiChat.isInAIChat(socket.id)) {
@@ -311,6 +371,17 @@ io.on('connection', (socket) => {
   });
 
   function handleDisconnect(socket) {
+    // Track if user was silent in this chat
+    const activity = userActivity.get(socket.id);
+    if (activity && activity.messagesInCurrentChat === 0) {
+      // User didn't send any messages in this chat
+      activity.consecutiveSilentChats++;
+      console.log(`⚠️  User ${socket.id} silent chat count: ${activity.consecutiveSilentChats}`);
+    }
+
+    // Clear inactivity timer
+    clearInactivityTimer(socket.id);
+
     // End AI chat if in one
     if (aiChat.isInAIChat(socket.id)) {
       aiChat.endAIChat(socket.id, 'user-disconnected');
@@ -349,6 +420,55 @@ io.on('connection', (socket) => {
     
     // Clean up rate limiting
     messageCounts.delete(socket.id);
+  }
+
+  /**
+   * Start inactivity timer for a user
+   * @param {string} userId - Socket ID
+   */
+  function startInactivityTimer(userId) {
+    // Clear existing timer if any
+    clearInactivityTimer(userId);
+
+    // Set new timer
+    const timer = setTimeout(() => {
+      console.log(`⏱️  User ${userId} inactive for 2.5 minutes, redirecting to home`);
+      
+      const userSocket = io.sockets.sockets.get(userId);
+      if (userSocket) {
+        // Redirect user to home page due to inactivity
+        userSocket.emit('inactivity-redirect', {
+          message: 'You were inactive for too long and have been returned to the home page.'
+        });
+
+        // Clean up their session
+        handleDisconnect(userSocket);
+      }
+    }, INACTIVITY_TIMEOUT);
+
+    inactivityTimers.set(userId, timer);
+  }
+
+  /**
+   * Reset inactivity timer for a user
+   * @param {string} userId - Socket ID
+   */
+  function resetInactivityTimer(userId) {
+    if (inactivityTimers.has(userId)) {
+      startInactivityTimer(userId);
+    }
+  }
+
+  /**
+   * Clear inactivity timer for a user
+   * @param {string} userId - Socket ID
+   */
+  function clearInactivityTimer(userId) {
+    const timer = inactivityTimers.get(userId);
+    if (timer) {
+      clearTimeout(timer);
+      inactivityTimers.delete(userId);
+    }
   }
 });
 
