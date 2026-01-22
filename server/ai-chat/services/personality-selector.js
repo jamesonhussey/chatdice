@@ -10,6 +10,7 @@ const personalitiesConfig = require('../config/personalities');
 class PersonalitySelector {
   constructor() {
     this.personalities = [];
+    this.generalInstructions = '';
     this.loadPersonalities();
   }
 
@@ -17,14 +18,31 @@ class PersonalitySelector {
    * Load all personality prompts from files
    */
   loadPersonalities() {
+    // Load general instructions first
+    const generalPath = path.join(__dirname, '../personalities', 'general-instructions.txt');
+    try {
+      this.generalInstructions = fs.readFileSync(generalPath, 'utf8');
+      console.log('✓ Loaded general AI instructions');
+    } catch (error) {
+      console.error('Failed to load general instructions:', error.message);
+      this.generalInstructions = '';
+    }
+
+    // Load personality-specific prompts
     this.personalities = personalitiesConfig.map(config => {
       const promptPath = path.join(__dirname, '../personalities', config.promptFile);
       
       try {
-        const prompt = fs.readFileSync(promptPath, 'utf8');
+        const personalityPrompt = fs.readFileSync(promptPath, 'utf8');
+        
+        // Combine general instructions with personality-specific prompt
+        const fullPrompt = this.generalInstructions 
+          ? `${this.generalInstructions}\n\n===== YOUR SPECIFIC PERSONALITY =====\n\n${personalityPrompt}`
+          : personalityPrompt;
+        
         return {
           ...config,
-          prompt: prompt
+          prompt: fullPrompt
         };
       } catch (error) {
         console.error(`Failed to load personality ${config.id}:`, error.message);

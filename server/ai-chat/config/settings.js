@@ -31,7 +31,7 @@ module.exports = {
   OPENAI_PRESENCE_PENALTY: 0.3,         // Encourage topic diversity
   
   // ===== HUMAN-LIKE BEHAVIOR =====
-  TYPO_PROBABILITY: 0.05,               // 5% chance of typo per message
+  TYPO_PROBABILITY: 0.07,               // 7% chance of typo per message
   LOWERCASE_PROBABILITY: 0.4,           // 40% chance of lowercase message
   IGNORE_PROBABILITY: 0.02,             // 2% chance AI doesn't respond
   SHORT_RESPONSE_PROBABILITY: 0.3,      // 30% chance of very short response
@@ -39,19 +39,17 @@ module.exports = {
   // ===== EXIT STRATEGIES =====
   // Weights for how AI ends conversations
   EXIT_STRATEGIES: {
-    GHOST: 0.70,                        // 70% - Just disconnect (most realistic)
-    BRB: 0.10,                          // 10% - "brb" then disconnect
+    GHOST: 0.80,                        // 70% - Just disconnect (most realistic)
     GTG: 0.10,                          // 10% - "gtg" or "gotta go"
     NATURAL: 0.10,                      // 10% - Natural exit message
   },
   
   NATURAL_EXIT_MESSAGES: [
-    "gtg, was nice chatting!",
-    "gotta run, take care!",
-    "brb my friend just called",
-    "oops parents calling, bye!",
-    "ah gotta go, bye!",
-    "my food just arrived lol bye",
+    "gtg, nice talking to you!!",
+    "take care!",
+    "oop bye lol",
+    "parents calling, see ya",
+    "my food just got here lol bye",
   ],
   
   // ===== CONVERSATION LIMITS =====
