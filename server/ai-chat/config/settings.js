@@ -23,7 +23,7 @@ module.exports = {
   FIRST_MESSAGE_DELAY_MAX: 6000,        // Maximum delay before first message (6 seconds)
   
   // ===== OPENAI SETTINGS =====
-  OPENAI_MODEL: 'gpt-3.5-turbo',        // Model to use
+  OPENAI_MODEL: 'gpt-4o-mini',          // Model to use (better instruction following than 3.5-turbo)
   OPENAI_TEMPERATURE: 0.9,              // Higher = more random/creative (0-2)
   OPENAI_MAX_TOKENS: 150,               // Max response length
   OPENAI_TOP_P: 1,                      // Nucleus sampling parameter
