@@ -14,6 +14,10 @@
 
 - [ ] **UI Overhaul** - Change the overall theme / UI to look much less AI-generated (color scheme mostly)
 
+- [ ] **More Graceful Leaving** - Lower chances of seeing "oop bye lol" message upon AI leaving chat
+
+- [ ] **Better AFK Handling** - Have AI say something like "Helloooooooooo ???" or something like that if user doesn't respond for awhile. Possibly have a percentage chance of AI simply ending the chat early or other options.
+
 
 ---
 
