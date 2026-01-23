@@ -107,15 +107,54 @@ class ConversationManager {
     }
 
     try {
-      // Get AI response
-      const rawResponse = await this.openaiClient.getChatCompletionWithRetry(
-        conversation.messages
-      );
+      // Check if autonomous leaving is enabled and AI has sent enough messages
+      const useAutonomousLeaving = 
+        config.AUTONOMOUS_LEAVING_ENABLED && 
+        conversation.messageCount >= config.MIN_MESSAGES_BEFORE_AUTONOMOUS_LEAVE;
+
+      let rawResponse;
+      let shouldLeave = false;
+      let leaveReason = null;
+
+      if (useAutonomousLeaving) {
+        // Add JSON instruction to messages
+        const messagesWithJsonInstruction = [
+          ...conversation.messages,
+          {
+            role: 'system',
+            content: 'Respond in JSON format: {"message": "your response here", "shouldLeave": true/false, "leaveReason": "bored/testing/creepy/natural_end/null"}. Set shouldLeave to true if you want to leave the conversation based on the rules you were given.'
+          }
+        ];
+
+        // Get response in JSON mode
+        const jsonResponse = await this.openaiClient.getChatCompletionWithRetry(
+          messagesWithJsonInstruction,
+          true // Enable JSON mode
+        );
+
+        // Log full JSON response for monitoring
+        if (config.LOG_AI_CONVERSATIONS) {
+          console.log(`📊 JSON Response from ${conversation.personality.name}:`, JSON.stringify(jsonResponse, null, 2));
+        }
+
+        rawResponse = jsonResponse.message || '';
+        shouldLeave = jsonResponse.shouldLeave || false;
+        leaveReason = jsonResponse.leaveReason || null;
+
+        if (shouldLeave && config.LOG_AI_CONVERSATIONS) {
+          console.log(`🚪 AI (${conversation.personality.name}) wants to leave: ${leaveReason}`);
+        }
+      } else {
+        // Regular text response
+        rawResponse = await this.openaiClient.getChatCompletionWithRetry(
+          conversation.messages
+        );
+      }
 
       // Humanize the response
       const humanizedResponse = HumanBehavior.humanize(rawResponse);
 
-      // Add to conversation history
+      // Add to conversation history (without the JSON instruction)
       conversation.messages.push({
         role: 'assistant',
         content: humanizedResponse
@@ -126,6 +165,30 @@ class ConversationManager {
 
       if (config.LOG_AI_CONVERSATIONS) {
         console.log(`🤖 AI (${conversation.personality.name}) → User ${userId}: "${humanizedResponse}"`);
+      }
+
+      // If AI wants to leave, handle exit strategy
+      if (shouldLeave) {
+        const exitStrategy = HumanBehavior.selectExitStrategy();
+        
+        if (exitStrategy.message) {
+          // Send exit message then disconnect
+          return {
+            response: humanizedResponse, // Send current message first
+            delay: delay,
+            shouldEnd: true,
+            exitType: exitStrategy.type,
+            exitMessage: exitStrategy.message
+          };
+        } else {
+          // Ghost after this message
+          return {
+            response: humanizedResponse,
+            delay: delay,
+            shouldEnd: true,
+            exitType: 'GHOST'
+          };
+        }
       }
 
       return {

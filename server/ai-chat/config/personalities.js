@@ -54,10 +54,10 @@ module.exports = [
     description: 'Film discussions, recommendations'
   },
   {
-    id: 'adventurer',
-    name: 'Adventurer',
-    promptFile: 'adventurer.txt',
-    weight: 0.9,
-    description: 'Outdoor activities, sports, adventures'
+    id: 'flirty',
+    name: 'Flirty',
+    promptFile: 'flirty.txt',
+    weight: 1.5,
+    description: 'Playful, flirty, knows when to back off'
   }
 ];

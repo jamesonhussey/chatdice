@@ -8,7 +8,12 @@
 
 - [ ] **"Users Online" Counter** - Display number of active users (only show when >20 concurrent to avoid deterring early users). Provides social proof.
 
-- [ ] **AI Autonomous Leaving** - Allow AI to decide when to leave conversations based on comfort/appropriateness. Use separate evaluation API call every X messages (e.g., every 5-7 messages) to keep costs low. Simple yes/no check: "Should you end this conversation?" This prevents inappropriate/weird interactions from lasting too long.
+- [x] **AI Autonomous Leaving** - AI can decide when to leave conversations (boring/testing/creepy/natural end). Uses JSON mode for structured responses with minimal cost overhead. Kicks in after 4 AI messages.
+
+- [ ] **Typing Speed Simulator** - Length of messages sent by AI should affect how long it takes for them to send
+
+- [ ] **UI Overhaul** - Change the overall theme / UI to look much less AI-generated (color scheme mostly)
+
 
 ---
 

@@ -258,9 +258,9 @@ io.on('connection', (socket) => {
         });
         
         if (response.shouldEnd) {
-          // AI wants to end conversation
+          // AI wants to end conversation (autonomous leaving or max time/messages)
           if (response.response) {
-            // Send exit message after delay
+            // Send current message first
             setTimeout(() => {
               socket.emit('message', {
                 userId: 'ai-bot',
@@ -268,16 +268,35 @@ io.on('connection', (socket) => {
                 timestamp: Date.now()
               });
               
-              // Disconnect after short delay
-              setTimeout(() => {
-                socket.emit('chat-ended', {
-                  reason: 'Chat partner disconnected'
-                });
-                aiChat.endAIChat(socket.id, 'ai-ended');
-              }, 1000);
+              // If there's an exit message (like "gtg"), send it too
+              if (response.exitMessage) {
+                setTimeout(() => {
+                  socket.emit('message', {
+                    userId: 'ai-bot',
+                    message: response.exitMessage,
+                    timestamp: Date.now()
+                  });
+                  
+                  // Then disconnect
+                  setTimeout(() => {
+                    socket.emit('chat-ended', {
+                      reason: 'Chat partner disconnected'
+                    });
+                    aiChat.endAIChat(socket.id, 'ai-ended');
+                  }, 1000);
+                }, 1500);
+              } else {
+                // No exit message - disconnect after current message
+                setTimeout(() => {
+                  socket.emit('chat-ended', {
+                    reason: 'Chat partner disconnected'
+                  });
+                  aiChat.endAIChat(socket.id, 'ai-ended');
+                }, 1000);
+              }
             }, response.delay);
           } else {
-            // Ghost - just disconnect
+            // Ghost - just disconnect (no message at all)
             setTimeout(() => {
               socket.emit('chat-ended', {
                 reason: 'Chat partner disconnected'

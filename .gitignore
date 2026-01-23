@@ -28,3 +28,6 @@ Thumbs.db
 # Build
 dist/
 build/
+
+# NSFW Content (exclude from repo)
+server/ai-chat/personalities/future-NSFW-Flirty.txt

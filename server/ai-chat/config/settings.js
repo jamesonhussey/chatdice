@@ -57,6 +57,10 @@ module.exports = {
   MAX_CONVERSATION_TIME: 600000,        // End after 10 minutes (milliseconds)
   MIN_CONVERSATION_LENGTH: 3,           // Must have at least 3 exchanges before ending
   
+  // ===== AUTONOMOUS LEAVING =====
+  AUTONOMOUS_LEAVING_ENABLED: true,     // Allow AI to decide when to leave conversations
+  MIN_MESSAGES_BEFORE_AUTONOMOUS_LEAVE: 4, // AI must respond at least 4 times before it can autonomously leave
+  
   // ===== SAFETY & MONITORING =====
   LOG_AI_CONVERSATIONS: true,           // Log AI conversations for monitoring
   MAX_RETRIES: 3,                       // Max retries for OpenAI API failures
