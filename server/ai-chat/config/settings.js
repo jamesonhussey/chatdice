@@ -33,7 +33,7 @@ module.exports = {
   // ===== HUMAN-LIKE BEHAVIOR =====
   TYPO_PROBABILITY: 0.07,               // 7% chance of typo per message
   LOWERCASE_PROBABILITY: 0.4,           // 40% chance of lowercase message
-  IGNORE_PROBABILITY: 0.02,             // 2% chance AI doesn't respond
+  IGNORE_PROBABILITY: 0,                // Disabled - AI always responds
   SHORT_RESPONSE_PROBABILITY: 0.3,      // 30% chance of very short response
   
   // ===== EXIT STRATEGIES =====
