@@ -31,3 +31,6 @@ build/
 
 # NSFW Content (exclude from repo)
 server/ai-chat/personalities/future-NSFW-Flirty.txt
+
+# Cursor exports (may contain secrets)
+server/exports/
